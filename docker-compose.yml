@@ -17,12 +17,6 @@ services:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_DATABASE}
-      VIRTUAL_PATH: /quanly-be-service-db
-      CORS_ORIGINS: ${CORS_ORIGINS}
-      VIRTUAL_HOST: ${VIRTUAL_HOST}
-      VIRTUAL_PORT: ${VIRTUAL_PORT:-5432}
-      LETSENCRYPT_HOST: ${LETSENCRYPT_HOST}
-      LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}
     restart: always
     volumes:
       - quanly-pk-be-service-db-data:/var/lib/postgresql/data
