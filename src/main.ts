@@ -5,7 +5,40 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim())
+    : [];
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, postman)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // If CORS_ORIGINS is empty or contains '*', allow all
+      if (corsOrigins.length === 0 || corsOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      
+      // Check if origin is in the allowed list
+      const isAllowed = corsOrigins.some((allowedOrigin) => {
+        return allowedOrigin.toLowerCase() === origin.toLowerCase();
+      });
+      
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.warn(`CORS blocked for origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+    allowedHeaders: 'Content-Type,Accept,Authorization,x-branch-id',
+  });
+
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     transform: true,
