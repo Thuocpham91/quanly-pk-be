@@ -5,7 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   const corsOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim())
     : [];
@@ -16,17 +16,17 @@ async function bootstrap() {
       if (!origin) {
         return callback(null, true);
       }
-      
+
       // If CORS_ORIGINS is empty or contains '*', allow all
       if (corsOrigins.length === 0 || corsOrigins.includes('*')) {
         return callback(null, true);
       }
-      
+
       // Check if origin is in the allowed list
       const isAllowed = corsOrigins.some((allowedOrigin) => {
         return allowedOrigin.toLowerCase() === origin.toLowerCase();
       });
-      
+
       if (isAllowed) {
         callback(null, true);
       } else {
@@ -39,20 +39,24 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type,Accept,Authorization,x-branch-id',
   });
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-    exceptionFactory: (errors) => {
-      console.error('--- VALIDATION ERROR ---');
-      errors.forEach(err => {
-        console.error(`Property: ${err.property}`);
-        console.error(`Constraints:`, err.constraints);
-      });
-      console.error('------------------------');
-      const messages = errors.map(error => Object.values(error.constraints || {})).flat();
-      return new BadRequestException(messages);
-    }
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      exceptionFactory: (errors) => {
+        console.error('--- VALIDATION ERROR ---');
+        errors.forEach((err) => {
+          console.error(`Property: ${err.property}`);
+          console.error(`Constraints:`, err.constraints);
+        });
+        console.error('------------------------');
+        const messages = errors
+          .map((error) => Object.values(error.constraints || {}))
+          .flat();
+        return new BadRequestException(messages);
+      },
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle('API Documentation')
