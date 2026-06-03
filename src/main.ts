@@ -8,6 +8,7 @@ async function bootstrap() {
 
   const corsOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS
+        .replace(/['"]/g, '') // Clean up double/single quotes from Docker env
         .split(',')
         .map((origin) => origin.trim())
         .filter(Boolean)
@@ -28,11 +29,17 @@ async function bootstrap() {
         return callback(null, true);
       }
 
+      const normalizedOrigin = origin.toLowerCase().trim();
       const isAllowed = corsOrigins.some((allowedOrigin) => {
-        return allowedOrigin.toLowerCase() === origin.toLowerCase();
+        return allowedOrigin.toLowerCase().trim() === normalizedOrigin;
       });
 
-      if (isAllowed) {
+      // Wildcard dynamic fallback for owned domains
+      if (
+        isAllowed || 
+        normalizedOrigin.endsWith('.chuyendoisovn.com.vn') || 
+        normalizedOrigin.endsWith('.gagiongsamoanh.com')
+      ) {
         console.log(`CORS allow origin: ${origin}`);
         callback(null, true);
       } else {
@@ -42,7 +49,7 @@ async function bootstrap() {
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-    allowedHeaders: 'Content-Type,Accept,Authorization,X-Branch-Id',
+    // allowedHeaders is omitted so it reflects the requested headers automatically
     preflightContinue: false,
     optionsSuccessStatus: 204,
   });
