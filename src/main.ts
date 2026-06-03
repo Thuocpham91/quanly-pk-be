@@ -13,6 +13,8 @@ async function bootstrap() {
         .filter(Boolean)
     : [];
 
+  console.log('CORS_ORIGINS:', corsOrigins.length ? corsOrigins : '[none]');
+
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, curl, postman)
@@ -22,15 +24,16 @@ async function bootstrap() {
 
       // If CORS_ORIGINS is empty or contains '*', allow all
       if (corsOrigins.length === 0 || corsOrigins.includes('*')) {
+        console.log(`CORS allow origin (open policy): ${origin}`);
         return callback(null, true);
       }
 
-      // Check if origin is in the allowed list
       const isAllowed = corsOrigins.some((allowedOrigin) => {
         return allowedOrigin.toLowerCase() === origin.toLowerCase();
       });
 
       if (isAllowed) {
+        console.log(`CORS allow origin: ${origin}`);
         callback(null, true);
       } else {
         console.warn(`CORS blocked for origin: ${origin}`);
@@ -39,7 +42,9 @@ async function bootstrap() {
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-    allowedHeaders: 'Content-Type,Accept,Authorization,x-branch-id',
+    allowedHeaders: 'Content-Type,Accept,Authorization,X-Branch-Id',
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   app.useGlobalPipes(
