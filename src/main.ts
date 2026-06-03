@@ -23,7 +23,7 @@ async function bootstrap() {
         return callback(null, true);
       }
 
-      // If CORS_ORIGINS is empty or contains '*', allow all
+      // If CORS_ORIGINS is empty or contains '*', allow all origins
       if (corsOrigins.length === 0 || corsOrigins.includes('*')) {
         console.log(`CORS allow origin (open policy): ${origin}`);
         return callback(null, true);
@@ -36,8 +36,8 @@ async function bootstrap() {
 
       // Wildcard dynamic fallback for owned domains
       if (
-        isAllowed || 
-        normalizedOrigin.endsWith('.chuyendoisovn.com.vn') || 
+        isAllowed ||
+        normalizedOrigin.endsWith('.chuyendoisovn.com.vn') ||
         normalizedOrigin.endsWith('.gagiongsamoanh.com')
       ) {
         console.log(`CORS allow origin: ${origin}`);
@@ -47,11 +47,20 @@ async function bootstrap() {
         callback(null, false);
       }
     },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Headers',
+    ],
     credentials: true,
-    // allowedHeaders is omitted so it reflects the requested headers automatically
     preflightContinue: false,
     optionsSuccessStatus: 204,
+    maxAge: 86400,
   });
 
   app.useGlobalPipes(
