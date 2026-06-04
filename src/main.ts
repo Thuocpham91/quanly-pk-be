@@ -66,7 +66,10 @@ async function bootstrap() {
     app.use(morgan('dev'));
 
     app.enableCors({
-      origin: '*',
+      origin: [
+        'https://pkty.chuyendoisovn.com.vn',
+        'https://pkty.gagiongsamoanh.com',
+      ],
       methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['authorization', 'content-type', 'x-custom-lang'],
       credentials: true,
