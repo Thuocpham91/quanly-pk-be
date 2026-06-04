@@ -11,7 +11,8 @@ import {
   UploadedFile,
   UploadedFiles,
 } from "@nestjs/common";
-import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
+import { FastifyFileInterceptor } from "./fastify-file.interceptor";
+import { FastifyFilesInterceptor } from "./fastify-files.interceptor";
 import * as express from "express";
 import { FileService } from "./file.service";
 import { ApiTags, ApiConsumes, ApiBody } from "@nestjs/swagger";
@@ -34,7 +35,7 @@ export class FileController {
   constructor(private readonly fileService: FileService) {}
 
   @Post("upload")
-  @UseInterceptors(FileInterceptor("files"))
+  @UseInterceptors(FastifyFileInterceptor("files"))
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
@@ -52,7 +53,7 @@ export class FileController {
   }
 
   @Post("upload-multiple")
-  @UseInterceptors(FilesInterceptor("files"))
+  @UseInterceptors(FastifyFilesInterceptor("files"))
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {
