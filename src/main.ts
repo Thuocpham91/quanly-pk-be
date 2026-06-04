@@ -1,100 +1,100 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, BadRequestException, Logger } from '@nestjs/common';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import { useContainer } from 'class-validator';
+import { useSwagger } from './configs';
+
+import cookie from '@fastify/cookie';
+import multipart from '@fastify/multipart';
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const morgan = require('morgan');
+
+process.on('unhandledRejection', (reason) => {
+  console.error('🔥 UNHANDLED PROMISE REJECTION:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('🔥 UNCAUGHT EXCEPTION:', err);
+});
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  try {
+    const adapter = new FastifyAdapter({
+      bodyLimit: 100 * 1024 * 1024,
+    });
 
-  const corsOrigins = process.env.CORS_ORIGINS
-    ? process.env.CORS_ORIGINS
-        .replace(/['"]/g, '') // Clean up double/single quotes from Docker env
-        .split(',')
-        .map((origin) => origin.trim())
-        .filter(Boolean)
-    : [];
+    const app = await NestFactory.create<NestFastifyApplication>(
+      AppModule,
+      adapter,
+    );
 
-  console.log('CORS_ORIGINS:', corsOrigins.length ? corsOrigins : '[none]');
+    /* ---------------- FASTIFY INSTANCE ---------------- */
+    const fastify = adapter.getInstance();
 
-  app.enableCors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, postman)
-      if (!origin) {
-        return callback(null, true);
-      }
+    // 🔥 Disable HTTP cache (Swagger always fresh)
+    fastify.addHook('onSend', async (_req, reply) => {
+      reply
+        .header(
+          'Cache-Control',
+          'no-store, no-cache, must-revalidate, proxy-revalidate',
+        )
+        .header('Pragma', 'no-cache')
+        .header('Expires', '0')
+        .header('Surrogate-Control', 'no-store');
+    });
 
-      // If CORS_ORIGINS is empty or contains '*', allow all origins
-      if (corsOrigins.length === 0 || corsOrigins.includes('*')) {
-        console.log(`CORS allow origin (open policy): ${origin}`);
-        return callback(null, true);
-      }
+    /* ---------------- FASTIFY PLUGINS ---------------- */
+    await app.register(cookie);
 
-      const normalizedOrigin = origin.toLowerCase().trim();
-      const isAllowed = corsOrigins.some((allowedOrigin) => {
-        return allowedOrigin.toLowerCase().trim() === normalizedOrigin;
-      });
-
-      // Wildcard dynamic fallback for owned domains
-      if (
-        isAllowed ||
-        normalizedOrigin.endsWith('.chuyendoisovn.com.vn') ||
-        normalizedOrigin.endsWith('.gagiongsamoanh.com')
-      ) {
-        console.log(`CORS allow origin: ${origin}`);
-        callback(null, true);
-      } else {
-        console.warn(`CORS blocked for origin: ${origin}`);
-        callback(null, false);
-      }
-    },
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Accept',
-      'Origin',
-      'X-Requested-With',
-      'Access-Control-Allow-Origin',
-      'Access-Control-Allow-Headers',
-    ],
-    credentials: true,
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-    maxAge: 86400,
-  });
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-      exceptionFactory: (errors) => {
-        console.error('--- VALIDATION ERROR ---');
-        errors.forEach((err) => {
-          console.error(`Property: ${err.property}`);
-          console.error(`Constraints:`, err.constraints);
-        });
-        console.error('------------------------');
-        const messages = errors
-          .map((error) => Object.values(error.constraints || {}))
-          .flat();
-        return new BadRequestException(messages);
+    await app.register(multipart, {
+      attachFieldsToBody: false,
+      limits: {
+        files: 50,
+        fileSize: 20 * 1024 * 1024,
+        fields: 100,
+        fieldNameSize: 200,
       },
-    }),
-  );
+    });
 
-  const config = new DocumentBuilder()
-    .setTitle('API Documentation')
-    .setDescription('The API description')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, documentFactory);
-  const port = process.env.PORT ?? 3000;
-  await app.listen(port);
+    /* ---------------- MIDDLEWARES ---------------- */
+    app.use(morgan('dev'));
 
-  const logger = new Logger('Bootstrap');
-  logger.log(`Application is running on port: ${port}`);
-  logger.log(`Swagger documentation is available at: http://localhost:${port}/api/docs`);
+    app.enableCors({
+      origin: '*',
+      methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['authorization', 'content-type', 'x-custom-lang'],
+      credentials: true,
+    });
+
+    app.useGlobalPipes(
+      new ValidationPipe({
+        transform: true,
+        whitelist: true,
+      }),
+    );
+
+    app.setGlobalPrefix('api/v1');
+    useContainer(app.select(AppModule), { fallbackOnErrors: true });
+
+    /* ---------------- SWAGGER ---------------- */
+    useSwagger(app);
+
+    const port = app.get(ConfigService).get<number>('PORT') || 4002;
+    await app.listen(port, '0.0.0.0');
+
+    const url = await app.getUrl();
+    console.log(`🚀 Application is running on ${url}`);
+    console.log(`📘 Swagger: ${url}/api/docs`);
+  } catch (err) {
+    console.error('❌ Fatal error during bootstrap:', err);
+    process.exit(1);
+  }
 }
+
 bootstrap();
