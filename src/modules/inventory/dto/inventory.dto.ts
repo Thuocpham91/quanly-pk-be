@@ -1,5 +1,6 @@
 import { IsString, IsNotEmpty, IsOptional, IsNumber, IsDateString, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/mapped-types';
 
 export class CreateInventoryBatchDto {
   @IsString()
@@ -58,15 +59,7 @@ export class CreateInventoryBatchDto {
   personnelName?: string;
 }
 
-export class UpdateInventoryBatchDto {
-  @IsNumber()
-  @IsOptional()
-  currentQuantity?: number;
-
-  @IsNumber()
-  @IsOptional()
-  costPrice?: number;
-}
+export class UpdateInventoryBatchDto extends PartialType(CreateInventoryBatchDto) {}
 
 export class ExportStockDto {
   @IsString()

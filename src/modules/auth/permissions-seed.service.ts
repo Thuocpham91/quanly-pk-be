@@ -222,8 +222,10 @@ export class PermissionsSeedService implements OnApplicationBootstrap {
     const email = 'admin@gmail.com';
     let admin = await this.userRepo.findOne({ where: { email } });
 
+    const adminPassword = this.configService.get<string>('ADMIN_PASSWORD');
+
     if (!admin) {
-      const rawPassword = Math.random().toString(36).slice(-8);
+      const rawPassword = adminPassword || Math.random().toString(36).slice(-8);
       const hashedPassword = await bcrypt.hash(rawPassword, 10);
       admin = await this.userRepo.save(
         this.userRepo.create({
@@ -234,6 +236,14 @@ export class PermissionsSeedService implements OnApplicationBootstrap {
         }),
       );
       console.log(`Created admin user: ${email}`);
+      if (adminPassword) {
+        console.log('ADMIN_PASSWORD is set in environment; admin password has been configured.');
+      }
+    } else if (adminPassword) {
+      const hashedPassword = await bcrypt.hash(adminPassword, 10);
+      admin.password = hashedPassword;
+      await this.userRepo.save(admin);
+      console.log('ADMIN_PASSWORD is set in environment; existing admin password has been updated.');
 
       const notifyEmail = this.configService.get<string>('ADMIN_NOTIFY_EMAIL');
       if (notifyEmail) {
@@ -241,7 +251,7 @@ export class PermissionsSeedService implements OnApplicationBootstrap {
           const loginUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
           await this.mailService.sendAdminCredentials(notifyEmail, {
             email: email,
-            password: rawPassword,
+            password: adminPassword,
             loginUrl,
           });
           console.log(`Sent generated admin credentials to ${notifyEmail}`);
@@ -250,7 +260,7 @@ export class PermissionsSeedService implements OnApplicationBootstrap {
         }
       } else {
         console.warn('ADMIN_NOTIFY_EMAIL is not set in .env. Password generated but not emailed.');
-        console.log(`[DEV ONLY] Admin Password: ${rawPassword}`);
+        console.log(`[DEV ONLY] Admin Password: ${adminPassword}`);
       }
     }
 

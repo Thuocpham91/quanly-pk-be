@@ -168,4 +168,8 @@ export class UsersService {
     }
     await this.usersRepository.remove(user);
   }
+
+  async updateFcmToken(userId: string, fcmToken: string): Promise<void> {
+    await this.usersRepository.update(userId, { fcmToken });
+  }
 }

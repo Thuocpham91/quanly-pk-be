@@ -8,6 +8,7 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { useContainer } from 'class-validator';
 import { useSwagger } from './configs';
+import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
@@ -65,15 +66,18 @@ async function bootstrap() {
     /* ---------------- MIDDLEWARES ---------------- */
     app.use(morgan('dev'));
 
+    const configService = app.get(ConfigService);
+    const corsOrigins = configService.get<string>('CORS_ORIGINS');
+    const originList = corsOrigins ? corsOrigins.split(',').map((o) => o.trim()) : '*';
+
     app.enableCors({
-      origin: [
-        'https://pkty.chuyendoisovn.com.vn',
-        'https://pkty.gagiongsamoanh.com',
-      ],
+      origin: originList,
       methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['authorization', 'content-type', 'x-custom-lang'],
+      allowedHeaders: ['authorization', 'content-type', 'x-custom-lang', 'x-branch-id'],
       credentials: true,
     });
+
+    app.useGlobalFilters(new AllExceptionsFilter());
 
     app.useGlobalPipes(
       new ValidationPipe({

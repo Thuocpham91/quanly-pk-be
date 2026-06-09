@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Query, Put, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Query,
+  Put,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -40,15 +50,24 @@ export class OrdersController {
 
     // Kiểm tra xem user có quyền xem tất cả không
     const ubr = await this.ubrRepo.findOne({
-      where: { userId, branchId: branchId || undefined },
+      where: { userId, branchId: branchId || undefined, isActive: true },
       relations: ['role', 'role.permissions'],
       order: { createdAt: 'ASC' },
     });
     const userPerms = ubr?.role?.permissions?.map((p: any) => p.name) || [];
-    const isAdmin = req.user.email?.toLowerCase() === 'admin@gmail.com' || ubr?.role?.name === 'Admin';
+    const isAdmin =
+      req.user.email?.toLowerCase() === 'admin@gmail.com' ||
+      ubr?.role?.name === 'Admin';
     const viewAll = isAdmin || userPerms.includes('history.view_others');
 
-    return this.ordersService.findAll(branchId, page, limit, petId, customerId, viewAll ? undefined : userId);
+    return this.ordersService.findAll(
+      branchId,
+      page,
+      limit,
+      petId,
+      customerId,
+      viewAll ? undefined : userId,
+    );
   }
 
   @Get(':id')

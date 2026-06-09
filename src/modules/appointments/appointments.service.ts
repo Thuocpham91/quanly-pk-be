@@ -4,14 +4,14 @@ import { Repository } from 'typeorm';
 import { Appointment } from './entities/appointment.entity';
 import { CreateAppointmentDto, UpdateAppointmentDto } from './dto/appointment.dto';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface';
-import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AppointmentsService {
   constructor(
     @InjectRepository(Appointment)
     private readonly appointmentsRepository: Repository<Appointment>,
-    private readonly notificationsGateway: NotificationsGateway,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(createAppointmentDto: CreateAppointmentDto): Promise<Appointment> {
@@ -19,7 +19,7 @@ export class AppointmentsService {
     const saved = await this.appointmentsRepository.save(appointment);
     if (saved.userId) {
       try {
-        this.notificationsGateway.sendNotificationToUser(saved.userId, {
+        this.notificationsService.sendNotificationToUser(saved.userId, {
           type: 'info',
           message: `Bạn được giao công việc mới: ${saved.purpose}`,
           timestamp: new Date().toISOString(),

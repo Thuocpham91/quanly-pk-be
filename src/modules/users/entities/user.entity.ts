@@ -52,6 +52,9 @@ export class User {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ nullable: true })
+  fcmToken: string;
+
   @OneToMany(() => UserBranchRole, (ubr) => ubr.user)
   userBranchRoles: UserBranchRole[];
 

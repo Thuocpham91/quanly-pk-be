@@ -35,9 +35,25 @@ export class PermissionsGuard implements CanActivate {
       return false;
     }
 
+    const resolvedUserId = user.userId || user.id || user.sub;
+
     // Master Admin bypass - case insensitive
     if (user.email?.toLowerCase() === 'admin@gmail.com') {
       this.logger.log(`Master Admin bypass for ${user.email}`);
+      return true;
+    }
+
+    // Global Admin role bypass: nếu user có role Admin ở bất kỳ chi nhánh nào
+    const globalAdminRole = await this.userBranchRoleRepo
+      .createQueryBuilder('ubr')
+      .innerJoin('ubr.role', 'role')
+      .where('ubr.userId = :userId', { userId: resolvedUserId })
+      .andWhere('ubr.isActive = true')
+      .andWhere('role.name = :roleName', { roleName: 'Admin' })
+      .getOne();
+
+    if (globalAdminRole) {
+      this.logger.log(`Global Admin role bypass for user ${user.email}`);
       return true;
     }
 
@@ -46,13 +62,13 @@ export class PermissionsGuard implements CanActivate {
     if (branchId) {
       // Có branchId → tìm đúng chi nhánh
       userBranchRole = await this.userBranchRoleRepo.findOne({
-        where: { userId: user.id || user.sub, branchId: branchId as string },
+        where: { userId: resolvedUserId, branchId: branchId as string, isActive: true },
         relations: ['role', 'role.permissions'],
       });
     } else {
       // Không có branchId (xem tất cả chi nhánh) → lấy role đầu tiên của user
       userBranchRole = await this.userBranchRoleRepo.findOne({
-        where: { userId: user.id || user.sub },
+        where: { userId: resolvedUserId, isActive: true },
         relations: ['role', 'role.permissions'],
         order: { createdAt: 'ASC' },
       });

@@ -132,6 +132,27 @@ export class InventoryService {
     if (!batch) {
       throw new NotFoundException(`Batch with ID ${id} not found`);
     }
+
+    // Sanitize null values for NOT NULL numeric columns
+    const numericFields: (keyof UpdateInventoryBatchDto)[] = [
+      'taxAmount',
+      'discountAmount',
+      'shippingFee',
+      'costPrice',
+      'importedQuantity',
+      'currentQuantity',
+    ];
+    numericFields.forEach((field) => {
+      if (updateDto[field] === null) {
+        (updateDto as any)[field] = 0;
+      }
+    });
+
+    if (updateDto.importedQuantity !== undefined && updateDto.currentQuantity === undefined) {
+      const quantityDiff = updateDto.importedQuantity - batch.importedQuantity;
+      updateDto.currentQuantity = Math.max(0, batch.currentQuantity + quantityDiff);
+    }
+
     await this.inventoryRepository.update(id, updateDto);
     return this.inventoryRepository.findOne({ where: { id }, relations: ['product', 'distributor'] }) as Promise<InventoryBatch>;
   }

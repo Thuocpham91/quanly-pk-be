@@ -1,21 +1,15 @@
 import { Module } from '@nestjs/common';
-import { NotificationsGateway } from './notifications.gateway';
-import { AuthModule } from '../auth/auth.module';
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { NotificationsService } from './notifications.service';
+import { NotificationsController } from './notifications.controller';
+import { Notification } from './entities/notification.entity';
+import { FirebaseService } from './firebase.service';
+import { User } from '../users/entities/user.entity';
 
 @Module({
-  imports: [
-    AuthModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('SECRETKEY') || 'defaultSecret',
-      }),
-    }),
-  ],
-  providers: [NotificationsGateway],
-  exports: [NotificationsGateway],
+  imports: [TypeOrmModule.forFeature([Notification, User])],
+  controllers: [NotificationsController],
+  providers: [NotificationsService, FirebaseService],
+  exports: [NotificationsService, FirebaseService],
 })
 export class NotificationsModule {}

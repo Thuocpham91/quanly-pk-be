@@ -7,7 +7,7 @@ import { CreateOrderDto } from './dto/order.dto';
 import { InventoryService } from '../inventory/inventory.service';
 import { Customer } from '../customers/entities/customer.entity';
 import { UserBranchRole } from '../branches/entities/user-branch-role.entity';
-import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersService {
@@ -21,7 +21,7 @@ export class OrdersService {
     @InjectRepository(UserBranchRole)
     private readonly userBranchRoleRepository: Repository<UserBranchRole>,
     private readonly inventoryService: InventoryService,
-    private readonly notificationsGateway: NotificationsGateway,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto, branchId: string, userId: string): Promise<Order> {
@@ -149,7 +149,7 @@ export class OrdersService {
         const orderMessage = `${creatorName} vừa tạo đơn hàng mới ${savedOrder.orderCode} trị giá ${savedOrder.totalAmount.toLocaleString('vi-VN')}đ`;
 
         for (const recipientId of recipientIds) {
-          this.notificationsGateway.sendNotificationToUser(recipientId, {
+          this.notificationsService.sendNotificationToUser(recipientId, {
             type: 'success',
             message: orderMessage,
             timestamp: new Date().toISOString(),
